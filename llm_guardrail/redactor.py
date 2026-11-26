@@ -1,7 +1,8 @@
 """Policy engine and deterministic redactor for LLM prompts and responses."""
 
 from dataclasses import dataclass
-from typing import Dict, List
+import re
+from typing import Dict, Iterable, List, Optional
 
 from llm_guardrail.detectors import Detection, detect_sensitive_content
 
@@ -24,11 +25,21 @@ class GuardrailOutcome:
 class GuardrailEngine:
     """Applies FSI DLP redaction and blocks prompt-injection attempts."""
 
-    def __init__(self, block_on_injection: bool = True) -> None:
+    def __init__(
+        self,
+        block_on_injection: bool = True,
+        allowlist_patterns: Optional[Iterable[str]] = None,
+    ) -> None:
         self.block_on_injection = block_on_injection
+        self.allowlist = [re.compile(p) for p in (allowlist_patterns or ())]
 
     def evaluate(self, text: str) -> GuardrailOutcome:
-        detections = detect_sensitive_content(text)
+        raw_detections = detect_sensitive_content(text)
+        detections = [
+            d
+            for d in raw_detections
+            if not any(p.fullmatch(d.matched_text) for p in self.allowlist)
+        ]
         if not detections:
             return GuardrailOutcome("ALLOW", text, [])
 
