@@ -32,5 +32,11 @@ class TestGuardrailEngine(unittest.TestCase):
         self.assertEqual(outcome.action, "BLOCK")
 
 
+    def test_allowlist_bypasses_known_test_bsb(self) -> None:
+        engine = GuardrailEngine(allowlist_patterns=[r"062-000"])
+        outcome = engine.evaluate("Test branch BSB 062-000 is synthetic.")
+        self.assertEqual(outcome.action, "ALLOW")
+
+
 if __name__ == "__main__":
     unittest.main()
